@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" /> <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Próximamente</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=MuseoModerno:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      font-family: "MuseoModerno", sans-serif;
+      cursor: none; 
+      overflow: hidden; /* Importante para que el canvas no cause scroll */
+    }
+
+    .contenido-oculto {
+      /* ... (Tu CSS para el contenido sigue exactamente igual) ... */
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+      height: 100vh;
+      box-sizing: border-box;
+      background: linear-gradient(45deg, #b06a4d, #e2725b, #f4a460, #d2b48c);
+      background-size: 400% 400%;
+      animation: color-cycle 15s ease infinite;
+    }
+    .contenido-oculto h1 {
+      font-size: 5vw;
+      margin: 0;
+      font-weight: 700;
+      text-align: center;
+      line-height: 1.2;
+    }
+    .contenido-oculto h1, .contenido-oculto p {
+      color: #fff;
+      text-shadow: 0 0 8px rgba(0,0,0,0.3);
+    }
+    .contenido-oculto p {
+      font-size: 1.5vw;
+      margin-top: 10px;
+    }
+    .redes-sociales {
+      margin-top: 40px;
+    }
+    .redes-sociales a {
+      color: #fff;
+      text-decoration: none;
+      font-size: 2rem;
+      margin: 0 15px;
+      transition: opacity 0.3s ease;
+    }
+    .redes-sociales a:hover {
+      opacity: 0.7;
+    }
+
+    .overlay-blanco {
+      /* ... (Tu CSS para el reflector de desktop sigue exactamente igual) ... */
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100vh;
+      pointer-events: none;
+      background-color: #fafafa;
+      mask-image: radial-gradient(
+        circle 300px at var(--mouse-x, -999px) var(--mouse-y, -999px),
+        transparent 0%,
+        black 50%
+      );
+      mask-repeat: no-repeat;
+      -webkit-mask-image: radial-gradient(
+        circle 300px at var(--mouse-x, -999px) var(--mouse-y, -999px),
+        transparent 0%,
+        black 50%
+      );
+      -webkit-mask-repeat: no-repeat;
+    }
+    
+    /* --- NUEVO: Estilo para el Canvas "Rasca y Gana" --- */
+    #rasca-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100vh;
+      background-color: transparent; /* El JS lo rellenará */
+      z-index: 10; /* Encima del contenido, pero debajo del overlay (aunque no coexistirán) */
+      
+      /* Oculto por defecto (en desktop) */
+      display: none; 
+      
+      /* Le damos un cursor normal para móvil */
+      cursor: auto; 
+    }
+
+    /* --- Animación (sin cambios) --- */
+    @keyframes color-cycle {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    
+    /* --- MODIFICADO: Lógica para Móviles --- */
+    @media (hover: none) {
+      .overlay-blanco {
+        display: none; /* Oculta el reflector (como ya tenías) */
+      }
+      
+      /* NUEVO: Muestra el canvas SÓLO en móvil */
+      #rasca-canvas {
+        display: block; 
+      }
+      
+      body, html {
+        cursor: auto;
+      }
+
+      /* NUEVO: Ajustamos tamaños de fuente para que no sean diminutos en móvil */
+      .contenido-oculto h1 {
+        font-size: 10vw; /* Más grande en móvil */
+      }
+      .contenido-oculto p {
+        font-size: 4vw;
+      }
+      .redes-sociales a {
+        font-size: 3rem; /* Iconos más grandes */
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="contenido-oculto">
+    <h1>PRÓXIMAMENTE<br>COMMA ESTUDIO</h1>
+    <div class="redes-sociales">
+      <a href="https://www.instagram.com/comma.estudio/" target="_blank" aria-label="Instagram"><i class="fa-brands fa-instagram"></i></a>
+    </div>
+ </div>
+
+  <div class="overlay-blanco"></div>
+
+  <canvas id="rasca-canvas"></canvas>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+
+      // --- Tu código de reflector (para desktop) SIN CAMBIOS ---
+      window.addEventListener('mousemove', (e) => {
+        document.documentElement.style.setProperty('--mouse-x', e.clientX + 'px');
+        document.documentElement.style.setProperty('--mouse-y', e.clientY + 'px');
+      });
+
+      // --- NUEVO: Lógica "Rasca y Gana" para móvil ---
+      const canvas = document.getElementById('rasca-canvas');
+      const ctx = canvas.getContext('2d');
+      let isDrawing = false;
+
+      // Función para ajustar el tamaño del canvas y rellenarlo
+      function setupCanvas() {
+        // Ajustamos el tamaño del canvas a la pantalla
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        // Rellenamos la capa "rascable" con el color crema
+        ctx.fillStyle = '#fafafa'; 
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Opcional: Añadimos un texto de ayuda
+        ctx.fillStyle = '#aaa'; // Color del texto de ayuda
+        ctx.font = 'bold 20px "MuseoModerno"';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('Rasca aquí para descubrir', canvas.width / 2, canvas.height / 2);
+      }
+      
+      // Función para obtener la posición del dedo
+      function getTouchPos(e) {
+        const rect = canvas.getBoundingClientRect();
+        return {
+          x: e.touches[0].clientX - rect.left,
+          y: e.touches[0].clientY - rect.top
+        };
+      }
+
+      // Función que "borra" el canvas
+      function scratch(e) {
+        if (!isDrawing) return;
+        
+        // Evita que la página haga scroll mientras se rasca
+        e.preventDefault(); 
+        const pos = getTouchPos(e);
+
+        // Esta es la magia: "destination-out" actúa como una goma de borrar
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.beginPath();
+        ctx.arc(pos.x, pos.y, 40, 0, Math.PI * 2); // Círculo de borrado de 40px
+        ctx.fill();
+      }
+
+      // Detectamos si estamos en un dispositivo táctil (comprobando si el canvas está visible)
+      // Esto evita que este código se ejecute en desktop
+      if (window.getComputedStyle(canvas).display === 'block') {
+        setupCanvas(); // Preparamos el canvas al cargar
+
+        // Eventos táctiles
+        canvas.addEventListener('touchstart', (e) => {
+          isDrawing = true;
+          scratch(e); // Permite "rascar" con un solo toque
+        });
+
+        canvas.addEventListener('touchmove', scratch);
+
+        canvas.addEventListener('touchend', () => {
+          isDrawing = false;
+        });
+
+        // Re-dibujar si el usuario rota el móvil
+        window.addEventListener('resize', setupCanvas); 
+      }
+
+    });
+  </script>
+
+</body>
+</html>
